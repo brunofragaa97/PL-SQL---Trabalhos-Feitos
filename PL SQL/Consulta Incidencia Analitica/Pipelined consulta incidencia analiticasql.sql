@@ -18,9 +18,8 @@
          
  END PKG_RELATORIOS_PAD_DEV;
 
-
  --BODY DA PKG
- FUNCTION con_incidencias_analitica(
+	FUNCTION con_incidencias_analitica(
 		in_seq_execucao NUMBER
     ) RETURN tp_tab_con_incidencias_analitica PIPELINED
     IS
@@ -41,7 +40,7 @@
             filtro_referencia_ini := TO_DATE('01/05/2025', 'DD/MM/YYYY');
             filtro_referencia_fim := TO_DATE('31/05/2025', 'DD/MM/YYYY');
             filtro_tipofolha := xcp_array_number_tp(1);
-            filtro_incidencia := 110;
+            filtro_incidencia := 15;
         ELSE
             filtro_tipofolha := pkg_xcp_execucao.busca_vlr_par_multi(in_seq_execucao, 'par_tpfolha');
             filtro_vinculos  := pkg_xcp_execucao.busca_vlr_par_multi(in_seq_execucao, 'par_vinculos');
@@ -64,7 +63,9 @@
            c.tipofolha,
            c.conta,
            c.valor,
-           c.valor as total
+           c.valor as total,
+           i.tipoincidencia as tpincidencia,
+           i.sinal as sinal
             FROM funcionarios f
             JOIN calculos c 
 				ON f.empresa = c.empresa 
@@ -81,20 +82,22 @@
             AND (filtro_vinculos_size = 0 OR f.vinculo MEMBER OF filtro_vinculos)
         )
         LOOP
+ 
             v_row.periodo    := r.periodo;
             v_row.cpf        := r.cpf;
             v_row.matricula  := r.matricula;
             v_row.nome       := r.nome;
             v_row.tipofolha := r.tipofolha;
             v_row.conta      := r.conta;
-            v_row.valor      := r.valor;
-    
-            PIPE ROW(v_row);
-            
-            v_row.conta      := -1;
-            v_row.valor      := r.valor;
-            
-            PIPE ROW(v_row);
+            v_row.valor      := CASE WHEN r.sinal = '-' THEN -NVL(r.valor, 0) ELSE NVL(r.valor, 0)  END;
+              PIPE ROW(v_row);
+              
+             v_row.conta      := -1;
+             v_row.valor      :=  CASE WHEN r.sinal = '-' THEN -NVL(r.valor, 0) ELSE NVL(r.valor, 0)  END;
+             PIPE ROW(v_row);
+
+        
         END LOOP;
     END;
+
 
